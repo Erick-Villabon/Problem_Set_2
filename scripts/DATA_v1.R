@@ -5,7 +5,7 @@
 #_____________________________________________________________________________#
 
 #   Autores: - Erick Villabon                                                  
-#            -   
+#            - Juan Diego Duarte
 #            - 
 #            - 
 #
@@ -23,7 +23,7 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
        rio, leaflet, rgeos, tmaptools, sf, osmdata, tidymodels)
 
 # 1. Actualizatr espacio de trabajo 
-setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -339,6 +339,349 @@ leaflet() %>%
 #Creamos variables a partir de la descripcion
 train <- train %>%
   mutate(parqueadero = as.numeric(grepl("parqueadero", train$description)))
+
+
+#___________________________________________________________
+#___________________________________________________________
+#   Variables espaciales
+db <- rbind(test, train)
+
+train_sf <- st_as_sf(train, coords = c("lon", "lat"), crs=4326)
+test_sf <- st_as_sf(test, coords = c("lon", "lat"), crs=4326)
+
+db_sf <- st_as_sf(db, coords = c("lon", "lat"), crs=4326)
+
+#.................................
+##Cercania a Universidades
+universidades <- opq(bbox = getbb('Bogotá Colombia')) %>%
+  add_osm_feature(key='amenity', value= 'university')
+
+universidades_sf <- osmdata_sf(universidades)
+
+universidades_geometria <- universidades_sf$osm_polygons %>%
+  select(osm_id, name)
+
+centroides <- gCentroid(as(universidades_geometria$geometry, "Spatial"), byid = T)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons( data= universidades_geometria, col = "red",weight = 10,
+               opacity = 0.8, popup = universidades_geometria$name) %>%
+  addCircles(lng = train$lon, 
+             lat = train$lat, 
+             col = train$color,
+             fillOpacity = 1,
+             opacity = 1)
+
+centroides_sf <- st_as_sf(centroides, coords = c("x", "y"))
+
+dist_matrix_universidades <- st_distance(x=db_sf,y=centroides_sf)
+
+dist_min_universidades <- apply(dist_matrix_universidades, 1, min)
+
+db <- db %>% mutate(distancia_universidades = dist_min_universidades)
+
+
+posicion <- apply(dist_matrix_universidades, 1, function(x) which(min(x) == x))
+
+areas_universidades <- st_area(universidades_geometria)
+
+db <- db %>%
+  mutate(area_universidades = as.numeric(areas_universidades[posicion]))
+
+
+
+#.................................
+##Cercania a estaciones de transmilenio (variable cuadratica)
+parada_de_bus <- opq(bbox = getbb("Bogotá Colombia")) %>%
+  add_osm_feature(key ='amenity' , value = 'bus_station') 
+
+parada_de_bus_sf <- osmdata_sf(parada_de_bus)
+
+parada_de_bus_geometria <- parada_de_bus_sf$osm_polygons %>% 
+  select(osm_id, name)
+
+centroides <-st_centroid(parada_de_bus_geometria$geometry)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons(data = parada_de_bus_geometria, col = "#9BCD9B",weight = 10,
+              opacity = 0.8, popup = parada_de_bus_geometria$name) %>%
+  addCircles(data=centroides,col = '#698B69' , opacity = 0.5, radius = 1)
+
+
+centroides_sf <- do.call(rbind, st_geometry(centroides)) %>% 
+  as_tibble() %>% setNames(c("lon","lat")) 
+centroides_sf <- st_as_sf(centroides_sf, coords = c("lon", "lat"), crs=4326)
+  
+nearest <- st_nearest_feature(db_sf,centroides_sf)
+
+db<- db %>% mutate(distancia_bus=st_distance(x = db_sf, y = centroides_sf[nearest,], by_element=TRUE))
+
+
+
+#.................................
+##Cercania a teatros
+teatros <- opq(bbox = getbb("Bogotá Colombia")) %>%
+  add_osm_feature(key ='amenity' , value = 'theatre') 
+
+teatros_sf <- osmdata_sf(teatros)
+
+teatros_geometria <- teatros_sf$osm_polygons %>% 
+  select(osm_id, name)
+
+centroides <-st_centroid(teatros_geometria$geometry)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons(data = teatros_geometria, col = "#9BCD9B",weight = 10,
+              opacity = 0.8, popup = teatros_geometria$name) %>%
+  addCircles(data=centroides,col = '#698B69' , opacity = 0.5, radius = 1)
+
+
+centroides_sf <- do.call(rbind, st_geometry(centroides)) %>% 
+  as_tibble() %>% setNames(c("lon","lat")) 
+centroides_sf <- st_as_sf(centroides_sf, coords = c("lon", "lat"), crs=4326)
+
+nearest <- st_nearest_feature(db_sf,centroides_sf)
+
+db<- db %>% mutate(distancia_teatros=st_distance(x = db_sf, y = centroides_sf[nearest,], by_element=TRUE))
+
+
+#.................................
+##Cercania a policia
+policia <- opq(bbox = getbb("Bogotá Colombia")) %>%
+  add_osm_feature(key ='amenity' , value = 'police') 
+
+policia_sf <- osmdata_sf(policia)
+
+policia_geometria <- policia_sf$osm_polygons %>% 
+  select(osm_id, name)
+
+centroides <-st_centroid(policia_geometria$geometry)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons(data = policia_geometria, col = "#9BCD9B",weight = 10,
+              opacity = 0.8, popup = policia_geometria$name) %>%
+  addCircles(data=centroides,col = '#698B69' , opacity = 0.5, radius = 1)
+
+
+centroides_sf <- do.call(rbind, st_geometry(centroides)) %>% 
+  as_tibble() %>% setNames(c("lon","lat")) 
+centroides_sf <- st_as_sf(centroides_sf, coords = c("lon", "lat"), crs=4326)
+
+nearest <- st_nearest_feature(db_sf,centroides_sf)
+
+db<- db %>% mutate(distancia_policia=st_distance(x = db_sf, y = centroides_sf[nearest,], by_element=TRUE))
+
+
+#.................................
+##Cercania a concesionarios
+concesionarios <- opq(bbox = getbb("Bogotá Colombia")) %>%
+  add_osm_feature(key ='shop' , value = 'car') 
+
+concesionarios_sf <- osmdata_sf(concesionarios)
+
+concesionarios_geometria <- concesionarios_sf$osm_polygons %>% 
+  select(osm_id, name)
+
+centroides <-st_centroid(concesionarios_geometria$geometry)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons(data = concesionarios_geometria, col = "#9BCD9B",weight = 10,
+              opacity = 0.8, popup = concesionarios_geometria$name) %>%
+  addCircles(data=centroides,col = '#698B69' , opacity = 0.5, radius = 1)
+
+
+centroides_sf <- do.call(rbind, st_geometry(centroides)) %>% 
+  as_tibble() %>% setNames(c("lon","lat")) 
+centroides_sf <- st_as_sf(centroides_sf, coords = c("lon", "lat"), crs=4326)
+
+nearest <- st_nearest_feature(db_sf,centroides_sf)
+
+db<- db %>% mutate(distancia_concesionarios=st_distance(x = db_sf, y = centroides_sf[nearest,], by_element=TRUE))
+
+
+#.................................
+##Cercania a bancos
+banco <- opq(bbox = getbb("Bogotá Colombia")) %>%
+  add_osm_feature(key ='amenity' , value = 'bank') 
+
+banco_sf <- osmdata_sf(banco)
+
+banco_geometria <- banco_sf$osm_polygons %>% 
+  select(osm_id, name)
+
+centroides <-st_centroid(banco_geometria$geometry)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons(data = banco_geometria, col = "#9BCD9B",weight = 10,
+              opacity = 0.8, popup = banco_geometria$name) %>%
+  addCircles(data=centroides,col = '#698B69' , opacity = 0.5, radius = 1)
+
+
+centroides_sf <- do.call(rbind, st_geometry(centroides)) %>% 
+  as_tibble() %>% setNames(c("lon","lat")) 
+centroides_sf <- st_as_sf(centroides_sf, coords = c("lon", "lat"), crs=4326)
+
+nearest <- st_nearest_feature(db_sf,centroides_sf)
+
+db<- db %>% mutate(distancia_banco=st_distance(x = db_sf, y = centroides_sf[nearest,], by_element=TRUE))
+
+
+#.................................
+##Cercania a bombas de gasolina
+gasolina <- opq(bbox = getbb("Bogotá Colombia")) %>%
+  add_osm_feature(key ='amenity' , value = 'fuel') 
+
+gasolina_sf <- osmdata_sf(gasolina)
+
+gasolina_geometria <- gasolina_sf$osm_polygons %>% 
+  select(osm_id, name)
+
+centroides <-st_centroid(gasolina_geometria$geometry)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons(data = gasolina_geometria, col = "#9BCD9B",weight = 10,
+              opacity = 0.8, popup = gasolina_geometria$name) %>%
+  addCircles(data=centroides,col = '#698B69' , opacity = 0.5, radius = 1)
+
+
+centroides_sf <- do.call(rbind, st_geometry(centroides)) %>% 
+  as_tibble() %>% setNames(c("lon","lat")) 
+centroides_sf <- st_as_sf(centroides_sf, coords = c("lon", "lat"), crs=4326)
+
+nearest <- st_nearest_feature(db_sf,centroides_sf)
+
+db<- db %>% mutate(distancia_gasolina=st_distance(x = db_sf, y = centroides_sf[nearest,], by_element=TRUE))
+
+
+#.................................
+##Cercania a centros comerciales
+centro_comercial <- opq(bbox = getbb('Bogotá Colombia')) %>%
+  add_osm_feature(key='shop', value= 'mall')
+
+centro_comercial_sf <- osmdata_sf(centro_comercial)
+
+centro_comercial_geometria <- centro_comercial_sf$osm_polygons %>%
+  select(osm_id, name)
+
+centroides <- gCentroid(as(centro_comercial_geometria$geometry, "Spatial"), byid = T)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons( data= centro_comercial_geometria, col = "red",weight = 10,
+               opacity = 0.8, popup = centro_comercial_geometria$name) %>%
+  addCircles(lng = train$lon, 
+             lat = train$lat, 
+             col = train$color,
+             fillOpacity = 1,
+             opacity = 1)
+
+centroides_sf <- st_as_sf(centroides, coords = c("x", "y"))
+
+dist_matrix_comercial <- st_distance(x=db_sf,y=centroides_sf)
+
+dist_min_comercial <- apply(dist_matrix_comercial, 1, min)
+
+db <- db %>% mutate(distancia_comercial = dist_min_comercial)
+
+
+posicion <- apply(dist_matrix_comercial, 1, function(x) which(min(x) == x))
+
+areas_comercial <- st_area(centro_comercial_geometria)
+
+db <- db %>%
+  mutate(area_comercial = as.numeric(areas_comercial[posicion]))
+
+
+
+#.................................
+##Cercania a talleres
+talleres <- opq(bbox = getbb("Bogotá Colombia")) %>%
+  add_osm_feature(key ='shop' , value = 'car_repair') 
+
+talleres_sf <- osmdata_sf(talleres)
+
+talleres_geometria <- talleres_sf$osm_polygons %>% 
+  select(osm_id, name)
+
+centroides <-st_centroid(talleres_geometria$geometry)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons(data = talleres_geometria, col = "#9BCD9B",weight = 10,
+              opacity = 0.8, popup = talleres_geometria$name) %>%
+  addCircles(data=centroides,col = '#698B69' , opacity = 0.5, radius = 1)
+
+
+centroides_sf <- do.call(rbind, st_geometry(centroides)) %>% 
+  as_tibble() %>% setNames(c("lon","lat")) 
+centroides_sf <- st_as_sf(centroides_sf, coords = c("lon", "lat"), crs=4326)
+
+nearest <- st_nearest_feature(db_sf,centroides_sf)
+
+db<- db %>% mutate(distancia_talleres=st_distance(x = db_sf, y = centroides_sf[nearest,], by_element=TRUE))
+
+
+#.................................
+##Parques
+parques <- opq(bbox = getbb('Bogotá Colombia')) %>%
+  add_osm_feature(key='leisure', value= 'park')
+
+parques_sf <- osmdata_sf(parques)
+
+parques_geometria <- parques_sf$osm_polygons %>%
+  select(osm_id, name)
+
+centroides <- gCentroid(as(parques_geometria$geometry, "Spatial"), byid = T)
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons( data= parques_geometria, col = "red",weight = 10,
+               opacity = 0.8, popup = parques_geometria$name) %>%
+  addCircles(lng = train$lon, 
+             lat = train$lat, 
+             col = train$color,
+             fillOpacity = 1,
+             opacity = 1)
+
+centroides_sf <- st_as_sf(centroides, coords = c("x", "y"))
+
+dist_matrix_parques <- st_distance(x=db_sf,y=centroides_sf)
+
+dist_min_parques <- apply(dist_matrix_parques, 1, min)
+
+db <- db %>% mutate(distancia_parque = dist_min_parques)
+
+
+posicion <- apply(dist_matrix_parques, 1, function(x) which(min(x) == x))
+
+
+areas_parques <- st_area(parques_geometria)
+
+db <- db %>%
+  mutate(area_parques = as.numeric(areas_parques[posicion]))
+
+
+
+
+
+
 
 
 #___________________________________________________________
