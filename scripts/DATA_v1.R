@@ -23,7 +23,8 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
        rio, leaflet, rgeos, tmaptools, sf, osmdata, tidymodels)
 
 # 1. Actualizatr espacio de trabajo 
-setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
+#setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
+setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -180,7 +181,9 @@ test <- test %>%
   mutate(color = case_when(property_type == "Apartamento" ~ "#2A9D8F",
                            property_type == "Casa" ~ "#F4A261"))
 
-
+#Indicador de base
+test <- test %>%
+  mutate(base = c(0))
 
 
 
@@ -296,10 +299,13 @@ leaflet() %>%
   addCircles(lng = train$lon,
              lat = train$lat)
 
-# Ahora solo nos quedaremos con las observaciones que efectivamente están dentro de Chapinero
+##############
+#Nos quedamos con las localidades que queremos
+
 limites_b <- getbb("Localidad Teusaquillo, Bogotá")
 limites_c <- getbb("Localidad Barrios Unidos, Bogotá")
 limites_d <- getbb("Localidad Usaquén, Bogotá")
+limites_e <- getbb("Localidad Localidad Santa Fé, Bogotá") 
 
 # Filtrar los datos para incluir las coordenadas dentro de los límites de ambas localidades
 train <- train %>%
@@ -309,7 +315,9 @@ train <- train %>%
       (between(lon, limites_c[1, "min"], limites_c[1, "max"]) &
          between(lat, limites_c[2, "min"], limites_c[2, "max"]))|
           (between(lon, limites_d[1, "min"], limites_d[1, "max"]) &
-           between(lat, limites_d[2, "min"], limites_d[2, "max"]))
+           between(lat, limites_d[2, "min"], limites_d[2, "max"])) |
+            (between(lon, limites_e[1, "min"], limites_e[1, "max"]) &
+               between(lat, limites_e[2, "min"], limites_e[2, "max"]))
   )
 
 
@@ -340,7 +348,8 @@ leaflet() %>%
 train <- train %>%
   mutate(parqueadero = as.numeric(grepl("parqueadero", train$description)))
 
-
+train <- train %>%
+  mutate(base = c(1))
 #___________________________________________________________
 #___________________________________________________________
 #   Variables espaciales
@@ -679,16 +688,15 @@ db <- db %>%
 
 
 
-
-
-
+#___________________________________________________________
+#Dividir otra vez las bases con los datos espaciales
+test_2 <- db[db$base == 0, ]
+train_2 <- db[db$base == 1, ]
 
 
 #___________________________________________________________
 #   prediccion
-nrow(test)/nrow(train)
-
-db <- rbind(test, train)
+nrow(test_2)/nrow(train_2)
 
 #Toca validar
 
@@ -710,7 +718,10 @@ elastic_net_spec <- linear_reg(penalty = lambda, mixture = .5) %>%
 
 
 # Primera receta
-rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + property_type, data = db) %>%
+rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + property_type + distancia_universidades +
+                  distancia_bus + distancia_teatros + distancia_policia + distancia_concesionarios + 
+                  distancia_banco + distancia_gasolina + distancia_comercial + distancia_talleres + 
+                  distancia_parque, data = db) %>%
   step_interact(terms = ~ bathrooms:property_type+bedrooms:property_type) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
@@ -718,12 +729,18 @@ rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + property_type, data = db)
   step_normalize(all_predictors())
 
 # Segunda receta 
-rec_2 <- recipe(price ~ rooms + bathrooms + bedrooms + parqueadero, data = db) %>%
+rec_2 <- recipe(price ~ rooms + bathrooms + bedrooms + parqueadero + area_universidades + 
+                  area_comercial + area_parques, data = db) %>%
   step_interact(terms = ~ bathrooms:rooms+bedrooms:rooms) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) %>% 
   step_normalize(all_predictors())
+
+##Preguntas_______
+train_2 <- as.data.frame(lapply(train_2, as.double))
+test_2 <- as.data.frame(lapply(test_2, as.double))
+
 
 # Crear un flujo de trabajo que incluye la receta de preprocesamiento y el modelo
 workflow_1.1 <- workflow() %>%
@@ -753,37 +770,37 @@ workflow_2.3 <- workflow() %>%
 
 # Entrenamos el primer modelo con los datos de train 
 fit_1.1 <- workflow_1.1 %>%
-  fit(data = train)
+  fit(data = train_2)
 
 fit_1.2 <- workflow_1.2 %>%
-  fit(data = train)
+  fit(data = train_2)
 
 fit_1.3 <- workflow_1.3 %>%
-  fit(data = train)
+  fit(data = train_2)
 
 
 fit_2.1 <- workflow_1.1 %>%
-  fit(data = train)
+  fit(data = train_2)
 
 fit_2.2 <- workflow_2.2 %>%
-  fit(data = train)
+  fit(data = train_2)
 
 fit_2.3 <- workflow_1.1 %>%
-  fit(data = train)
+  fit(data = train_2)
 
 
 # Sacamos las predicciones sobre los datos de test 
-predictiones_1.1 <- predict(fit_1.1 , new_data = test)
+predictiones_1.1 <- predict(fit_1.1 , new_data = test_2)
 
-predictiones_1.2 <- predict(fit_1.2 , new_data = test)
+predictiones_1.2 <- predict(fit_1.2 , new_data = test_2)
 
-predictiones_1.3 <- predict(fit_1.3, new_data = test)
+predictiones_1.3 <- predict(fit_1.3, new_data = test_2)
 
-predictiones_2.1 <- predict(fit_2.1 , new_data = test)
+predictiones_2.1 <- predict(fit_2.1 , new_data = test_2)
 
-predictiones_2.2 <- predict(fit_2.2, new_data = test)
+predictiones_2.2 <- predict(fit_2.2, new_data = test_2)
 
-predictiones_2.3 <- predict(fit_2.3, new_data = test)
+predictiones_2.3 <- predict(fit_2.3, new_data = test_2)
 
 submission_template$ID <- 1:nrow(submission_template)
 
@@ -800,4 +817,4 @@ subidafinal = subset(subida, select = -c(ID,price) )
 
 colnames(subidafinal)[2]="price"
 
-write.csv(subidafinal,file='subida9.csv', row.names=FALSE)
+write.csv(subidafinal,file='subida10.csv', row.names=FALSE)
