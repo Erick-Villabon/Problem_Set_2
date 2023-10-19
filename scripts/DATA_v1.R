@@ -23,8 +23,8 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
        rio, leaflet, rgeos, tmaptools, sf, osmdata, tidymodels)
 
 # 1. Actualizatr espacio de trabajo 
-#setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
+#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -688,6 +688,22 @@ db <- db %>%
 
 
 
+db <- db %>%
+  mutate(distancia_bus_2 = distancia_bus*distancia_bus)
+db <- db %>%
+  mutate(distancia_parque_2 = distancia_parque*distancia_parque)
+db <- db %>%
+  mutate(distancia_comercial_2 = distancia_comercial*distancia_comercial)
+
+
+db <- db %>%
+  mutate(areaxuniversidades = area_universidades*distancia_universidades)
+db <- db %>%
+  mutate(areaxparques = area_parques*distancia_parque)
+db <- db %>%
+  mutate(areaxcomercial = area_comercial*distancia_comercial)
+
+
 #___________________________________________________________
 #Dividir otra vez las bases con los datos espaciales
 test_2 <- db[db$base == 0, ]
@@ -721,16 +737,16 @@ elastic_net_spec <- linear_reg(penalty = lambda, mixture = .5) %>%
 rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + property_type + distancia_universidades +
                   distancia_bus + distancia_teatros + distancia_policia + distancia_concesionarios + 
                   distancia_banco + distancia_gasolina + distancia_comercial + distancia_talleres + 
-                  distancia_parque, data = db) %>%
-  step_interact(terms = ~ bathrooms:property_type+bedrooms:property_type) %>% 
+                  distancia_parque + distancia_parque_2 + distancia_bus_2 + areaxparques, data = db) %>%
+  step_interact(terms = ~ bathrooms:rooms+bedrooms:rooms) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) %>% 
   step_normalize(all_predictors())
 
 # Segunda receta 
-rec_2 <- recipe(price ~ rooms + bathrooms + bedrooms + parqueadero + area_universidades + 
-                  area_comercial + area_parques, data = db) %>%
+rec_2 <- recipe(price ~ rooms + bathrooms + bedrooms + parqueadero + property_type + 
+                  area_comercial + distancia_bus + areaxparques + distancia_bus_2, data = db) %>%
   step_interact(terms = ~ bathrooms:rooms+bedrooms:rooms) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
@@ -817,4 +833,4 @@ subidafinal = subset(subida, select = -c(ID,price) )
 
 colnames(subidafinal)[2]="price"
 
-write.csv(subidafinal,file='subida10.csv', row.names=FALSE)
+write.csv(subidafinal,file='subida15.csv', row.names=FALSE)
