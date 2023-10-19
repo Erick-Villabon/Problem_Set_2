@@ -717,7 +717,7 @@ nrow(test_2)/nrow(train_2)
 #Toca validar
 
 ##Modelo
-lambda = .5
+lambda = .7
 
 # Ridge
 ridge_spec <- linear_reg(penalty = lambda, mixture = 1) %>%
