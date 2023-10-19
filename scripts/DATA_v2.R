@@ -701,7 +701,7 @@ nrow(test_2)/nrow(train_2)
 #Toca validar
 
 ##Modelo
-lambda = .7
+lambda = .5
 
 # Ridge
 ridge_spec <- linear_reg(penalty = lambda, mixture = 1) %>%
@@ -722,16 +722,17 @@ rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + property_type + distancia
                   distancia_bus + distancia_teatros + distancia_policia + distancia_concesionarios + 
                   distancia_banco + distancia_gasolina + distancia_comercial + distancia_talleres + 
                   distancia_parque , data = db) %>%
-  step_interact(terms = ~ rooms:property_type+bedrooms:property_type) %>% 
+  step_interact(terms = ~ rooms:bedrooms+bathrooms:property_type) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) %>% 
   step_normalize(all_predictors())
 
 # Segunda receta 
-rec_2 <- recipe(price ~ rooms + bathrooms + bedrooms + parqueadero + area_universidades + 
-                  area_comercial + area_parques , data = db) %>%
-  step_interact(terms = ~ rooms:rooms+bedrooms:rooms) %>% 
+rec_2 <- recipe(price ~ rooms + bathrooms + bedrooms + property_type + parqueadero + area_universidades + 
+                  area_comercial + area_parques + distancia_bus +  distancia_universidades +
+                  distancia_bus + distancia_teatros + distancia_policia , data = db) %>%
+  step_interact(terms = ~ rooms:bedrooms+bathrooms:property_type) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) %>% 
@@ -817,4 +818,4 @@ subidafinal = subset(subida, select = -c(ID,price) )
 
 colnames(subidafinal)[2]="price"
 
-write.csv(subidafinal,file='subida12.csv', row.names=FALSE)
+write.csv(subidafinal,file='subida20.csv', row.names=FALSE)
