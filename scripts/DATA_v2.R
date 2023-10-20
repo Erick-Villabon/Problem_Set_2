@@ -121,16 +121,6 @@ test$rooms %>%
 
 #
 
-for (i in 1:nrow(test)) {
-  match <- str_match(test$description[i], "(\\d+)\\s?(mts|m2)")
-  if (!is.na(match[1])) {
-    test$n_surface_total[i] <- as.integer(match[2])
-  }
-}
-summary(test$n_surface_total)
-
-##Tenemos mas del 50% de NA
-
 
 #creación de variable dummy
 
@@ -145,34 +135,6 @@ leaflet() %>%
   addCircles(lng = test$lon,
              lat = test$lat)
 
-# Ahora solo nos quedaremos con las observaciones que efectivamente están dentro de Chapinero
-#limites <- getbb("Localidad Chapinero Bogotá")
-#test <- test %>%
- # filter(
-  #  between(lon, limites[1, "min"], limites[1, "max"]) & 
-   #   between(lat, limites[2, "min"], limites[2, "max"])
-  #)
-
-
-#test <- test %>%
- # mutate(color = case_when(property_type == "Apartamento" ~ "#2A9D8F",
-  #                         property_type == "Casa" ~ "#F4A261"))
-
-
-# Encontramos el queremos que sea el centro del mapa 
-#latitud_central <- mean(test$lat)
-#longitud_central <- mean(test$lon)
-
-# Creamos el plot
-#leaflet() %>%
- # addTiles() %>%
-  #setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
-  #addCircles(lng = test$lon, 
-   #          lat = test$lat, 
-    #         col = test$color,
-     #        fillOpacity = 1,
-      #       opacity = 1)
-
 
 #Creamos variables a partir de la descripcion
 test <- test %>%
@@ -180,6 +142,69 @@ test <- test %>%
 test <- test %>%
   mutate(color = case_when(property_type == "Apartamento" ~ "#2A9D8F",
                            property_type == "Casa" ~ "#F4A261"))
+
+
+
+
+
+
+
+
+
+#imputamos los datos para obtener el area de la vivienda
+test$surface_total <- replace(test$surface_total, is.na(test$surface_total), test$surface_covered[is.na(test$surface_total)])
+test <- test %>%
+  mutate(surface_total = ifelse(is.na(surface_covered) | is.na(surface_total), surface_total, ifelse(surface_covered > surface_total, surface_covered, surface_total)))
+#
+for (i in 1:nrow(test)) {
+  match <- str_match(test$description[i], "(\\d+)\\s?(mts|m2|metros)")
+  if (!is.na(match[1]) && !is.na(match[2])) {
+    test$n_surface_total[i] <- as.integer(match[2])
+  } else {
+    test$n_surface_total[i] <- NA
+  }
+}
+test$surface_total <- ifelse(is.na(test$surface_total), test$n_surface_total, test$surface_total)
+summary(test$surface_total)
+
+test <- test %>%
+  mutate(total_rooms = rooms + bathrooms)
+
+
+p1  = quantile(test$surface_total, 0.01, na.rm = TRUE)
+p99 = quantile(test$surface_total, 0.99, na.rm = TRUE)
+p10 = quantile(test$surface_total, 0.10, na.rm = TRUE)
+p90 = quantile(test$surface_total, 0.90, na.rm = TRUE)
+
+# Calcular las medias
+mean_low = mean(test$surface_total[test$surface_total <= p10])
+mean_high = mean(test$surface_total[test$surface_total >= p90])
+
+# Reemplazar los valores en el 1% más bajo y más alto
+test$surface_total[test$surface_total < p1] <- mean_low
+test$surface_total[test$surface_total > p99] <- mean_high
+
+
+# Calcular la media de surface_total por total_rooms
+mean_surface <- tapply(test$surface_total, test$total_rooms, mean, na.rm = TRUE)
+
+# Imputar la media correspondiente a NA en surface_total
+test$surface_total[is.na(test$surface_total)] <- mean_surface[test$total_rooms[is.na(test$surface_total)]]
+
+summary(test$surface_total)
+
+# Calcular la media de surface_total
+mean_s <- mean(test$surface_total, na.rm = TRUE)
+
+# Imputar la media a los valores NA
+test$surface_total[is.na(test$surface_total)] <- mean_s
+
+summary(test$surface_total)
+
+
+
+
+
 
 #Indicador de base
 test <- test %>%
@@ -275,15 +300,62 @@ train$rooms %>%
 
 #
 
+#imputamos los datos para obtener el area de la vivienda
+train$surface_total <- replace(train$surface_total, is.na(train$surface_total), train$surface_covered[is.na(train$surface_total)])
+train <- train %>%
+  mutate(surface_total = ifelse(is.na(surface_covered) | is.na(surface_total), surface_total, ifelse(surface_covered > surface_total, surface_covered, surface_total)))
+#
 for (i in 1:nrow(train)) {
-  match <- str_match(train$description[i], "(\\d+)\\s?(mts|m2)")
-  if (!is.na(match[1])) {
+  match <- str_match(train$description[i], "(\\d+)\\s?(mts|m2|metros)")
+  if (!is.na(match[1]) && !is.na(match[2])) {
     train$n_surface_total[i] <- as.integer(match[2])
+  } else {
+    train$n_surface_total[i] <- NA
   }
 }
-summary(train$n_surface_total)
+train$surface_total <- ifelse(is.na(train$surface_total), train$n_surface_total, train$surface_total)
+summary(train$surface_total)
 
-##Tenemos mas del 50% de NA
+train <- train %>%
+  mutate(total_rooms = rooms + bathrooms)
+
+
+p1  = quantile(train$surface_total, 0.01, na.rm = TRUE)
+p99 = quantile(train$surface_total, 0.99, na.rm = TRUE)
+p10 = quantile(train$surface_total, 0.10, na.rm = TRUE)
+p90 = quantile(train$surface_total, 0.90, na.rm = TRUE)
+
+# Calcular las medias
+mean_low = mean(train$surface_total[train$surface_total <= p10])
+mean_high = mean(train$surface_total[train$surface_total >= p90])
+
+# Reemplazar los valores en el 1% más bajo y más alto
+train$surface_total[train$surface_total < p1] <- mean_low
+train$surface_total[train$surface_total > p99] <- mean_high
+
+
+# Calcular la media de surface_total por total_rooms
+mean_surface <- tapply(train$surface_total, train$total_rooms, mean, na.rm = TRUE)
+
+# Imputar la media correspondiente a NA en surface_total
+train$surface_total[is.na(train$surface_total)] <- mean_surface[train$total_rooms[is.na(train$surface_total)]]
+
+summary(train$surface_total)
+
+# Calcular la media de surface_total
+mean_s <- mean(train$surface_total, na.rm = TRUE)
+
+# Imputar la media a los valores NA
+train$surface_total[is.na(train$surface_total)] <- mean_s
+
+summary(train$surface_total)
+
+
+
+
+
+
+
 
 
 #creación de variable dummy
@@ -701,7 +773,7 @@ nrow(test_2)/nrow(train_2)
 #Toca validar
 
 ##Modelo
-lambda = .5
+lambda = .7
 
 # Ridge
 ridge_spec <- linear_reg(penalty = lambda, mixture = 1) %>%
@@ -718,21 +790,19 @@ elastic_net_spec <- linear_reg(penalty = lambda, mixture = .5) %>%
 
 
 # Primera receta
-rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + property_type + distancia_universidades +
-                  distancia_bus + distancia_teatros + distancia_policia + distancia_concesionarios + 
-                  distancia_banco + distancia_gasolina + distancia_comercial + distancia_talleres + 
-                  distancia_parque , data = db) %>%
-  step_interact(terms = ~ rooms:bedrooms+bathrooms:property_type) %>% 
+rec_1 <- recipe(price ~ total_rooms +surface_total + bathrooms + bedrooms + property_type + distancia_universidades +
+                  distancia_bus  + distancia_policia + distancia_concesionarios + distancia_parque , data = db) %>%
+  step_interact(terms = ~ total_rooms:bedrooms+bathrooms:property_type) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) %>% 
   step_normalize(all_predictors())
 
 # Segunda receta 
-rec_2 <- recipe(price ~ rooms + bathrooms + bedrooms + property_type + parqueadero + area_universidades + 
-                  area_comercial + area_parques + distancia_bus +  distancia_universidades +
-                  distancia_bus + distancia_teatros + distancia_policia , data = db) %>%
-  step_interact(terms = ~ rooms:bedrooms+bathrooms:property_type) %>% 
+rec_2 <- recipe(price ~ total_rooms + surface_total + bathrooms + bedrooms + property_type + area_universidades + 
+                  area_comercial + area_parques + distancia_bus  +
+                  distancia_bus + distancia_policia , data = db) %>%
+  step_interact(terms = ~ total_rooms:bedrooms+bathrooms:property_type) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) %>% 
@@ -818,4 +888,4 @@ subidafinal = subset(subida, select = -c(ID,price) )
 
 colnames(subidafinal)[2]="price"
 
-write.csv(subidafinal,file='subida20.csv', row.names=FALSE)
+write.csv(subidafinal,file='subida25.csv', row.names=FALSE)
