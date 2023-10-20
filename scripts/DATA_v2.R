@@ -895,15 +895,20 @@ colnames(subidafinal)[2]="price"
 write.csv(subidafinal,file='subida25.csv', row.names=FALSE)
 
 
+
+
+
+
+
+
+
+
 ####################
 ##Arboles###########
 ####################
 
 #___________________________________________________________
 #   prediccion
-train_2 <- as.data.frame(lapply(train_2, as.double))
-test_2 <- as.data.frame(lapply(test_2, as.double))
-
 # Tune grid aleatorio para el modelo de boost
 tune_grid_boost <- grid_random(
   trees(range = c(400, 700)),
@@ -961,8 +966,15 @@ best_parms_boost
 
 boost_final <- finalize_workflow(workflow_1.3, best_parms_boost)
 
+##Preguntas_______
+##train_2 <- as.data.frame(lapply(train_2, as.double))
+##test_2 <- as.data.frame(lapply(test_2, as.double))
+
+boost_final_fit <- boost_final %>%
+  fit(data = train_2)
+
 # Ajustar el modelo  utilizando los datos de entrenamiento
-boost_final_fit <- fit(boost_final, data = test_2)
+#boost_final_fit <- fit(boost_final, data = test_2)
 
 predictiones_1.3 <- predict(boost_final_fit, new_data = test_2)
 
