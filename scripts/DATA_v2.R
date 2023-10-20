@@ -20,11 +20,15 @@ rm(list = ls())
 
 library(pacman)
 p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, openxlsx, glmnet,
-       rio, leaflet, rgeos, tmaptools, sf, osmdata, tidymodels)
+       rio, leaflet, rgeos, tmaptools, sf, osmdata, tidymodels,
+       units, # unidades
+       randomForest, # Modelos de bosque aleatorio
+       rattle, # Interfaz gráfica para el modelado de datos
+       spatialsample)
 
 # 1. Actualizatr espacio de trabajo 
-#setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
+#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -889,3 +893,88 @@ subidafinal = subset(subida, select = -c(ID,price) )
 colnames(subidafinal)[2]="price"
 
 write.csv(subidafinal,file='subida25.csv', row.names=FALSE)
+
+
+####################
+##Arboles###########
+####################
+
+#___________________________________________________________
+#   prediccion
+train_2 <- as.data.frame(lapply(train_2, as.double))
+test_2 <- as.data.frame(lapply(test_2, as.double))
+
+# Tune grid aleatorio para el modelo de boost
+tune_grid_boost <- grid_random(
+  trees(range = c(400, 700)),
+  min_n(range = c(1, 4)),
+  learn_rate(range = c(0.001, 0.01)), size = 20
+)
+
+# Especificación del modelo boost_tree en tidymodels
+boost_spec <- boost_tree(
+  trees = tune(),
+  min_n = tune(),
+  learn_rate = tune()
+) %>%
+  set_mode("regression")  #
+
+# Primera receta
+rec_1 <- recipe(price ~ total_rooms +surface_total + bathrooms + bedrooms + property_type + distancia_universidades +
+                  distancia_bus  + distancia_policia + distancia_concesionarios + distancia_parque + area_parques + area_universidades, data = db) %>%
+  step_novel(all_nominal_predictors()) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_zv(all_predictors()) 
+
+workflow_1.3 <- workflow() %>%
+  add_recipe(rec_1) %>%
+  add_model(boost_spec)
+
+train_sff <- st_as_sf(
+  train_2,
+  # "coords" is in x/y order -- so longitude goes first!
+  coords = c("lon", "lat"),
+  # Set our coordinate reference system to EPSG:4326,
+  # the standard WGS84 geodetic coordinate reference system
+  crs = 4326
+)
+# aplicamos la funcion spatial_block_cv
+set.seed(123)
+block_folds <- spatial_block_cv(train_sff, v = 5)
+
+autoplot(block_folds)
+
+p_load("purrr")
+
+walk(block_folds$splits, function(x) print(autoplot(x)))
+
+tune_boost <- tune_grid(
+  workflow_1.3,
+  resamples = block_folds, 
+  grid = tune_grid_boost,
+  metrics = metric_set(mae)
+)
+
+# Utilizar 'select_best' para seleccionar el mejor valor.
+best_parms_boost <- select_best(tune_boost, metric = "mae")
+best_parms_boost
+
+boost_final <- finalize_workflow(workflow_1.3, best_parms_boost)
+
+# Ajustar el modelo  utilizando los datos de entrenamiento
+boost_final_fit <- fit(boost_final, data = test_2)
+
+predictiones_1.3 <- predict(boost_final_fit, new_data = test_2)
+
+submission_template$ID <- 1:nrow(submission_template)
+
+predictiones_1.3$ID <- 1:nrow(predictiones_1.3)
+
+subida <- merge(submission_template,predictiones_1.3, by="ID")
+
+subidafinal = subset(subida, select = -c(ID,price) )
+
+colnames(subidafinal)[2]="price"
+
+write.csv(subidafinal,file='subida26.csv', row.names=FALSE)
+
