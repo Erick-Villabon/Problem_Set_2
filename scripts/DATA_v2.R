@@ -27,8 +27,8 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
        spatialsample)
 
 # 1. Actualizatr espacio de trabajo 
-setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+#setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
+setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -925,8 +925,9 @@ boost_spec <- boost_tree(
   set_mode("regression")  #
 
 # Primera receta
-rec_1 <- recipe(price ~ total_rooms +surface_total + bathrooms + bedrooms + property_type + distancia_universidades +
-                  distancia_bus  + distancia_policia + distancia_concesionarios + distancia_parque + area_parques + area_universidades, data = db) %>%
+rec_1 <- recipe(price ~ total_rooms + surface_total + bathrooms + bedrooms + property_type + area_universidades + 
+                  area_comercial + area_parques + distancia_bus  +
+                  distancia_bus + distancia_policia , data = db) %>%
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) 
@@ -988,5 +989,5 @@ subidafinal = subset(subida, select = -c(ID,price) )
 
 colnames(subidafinal)[2]="price"
 
-write.csv(subidafinal,file='subida26.csv', row.names=FALSE)
+write.csv(subidafinal,file='subida29.csv', row.names=FALSE)
 
