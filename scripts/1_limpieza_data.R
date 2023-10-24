@@ -916,6 +916,14 @@ train_2 <- db[db$base == 1, ]
 #   prediccion
 nrow(test_2)/nrow(train_2)
 
+library(writexl)
+
+write_xlsx(test_2, "test.xlsx")
+write_xlsx(db, "db.xlsx")
+write_xlsx(train_2, "train.xlsx")
+
+
+
 #Toca validar
 
 ##Modelo
