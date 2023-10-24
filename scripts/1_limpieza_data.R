@@ -105,7 +105,7 @@ sinonimos <- c("habitacion", "habitaciones", "alcoba", "alcobas", "cuarto", "cua
 numeros_escritos <- c("uno|primero", "dos|segundo","tres|tercero", "cuatro|cuarto", "cinco|quinto", 
                       "seis|sexto", "siete|septimo", "ocho|octavo", "nueve|noveno", "diez|decimo")
 
-numeros_numericos <- as.character(1:10)
+numeros <- as.character(1:10)
 
 # Recorremos las filas del dataset
 for (i in 1:nrow(test)) {
@@ -115,7 +115,7 @@ for (i in 1:nrow(test)) {
     match <- str_match(test$description[i], patron_busqueda)
     if (!is.na(match[1])) {
       numero_match <- tolower(match[2])
-      numero_match <- str_replace_all(numero_match, setNames(numeros_numericos, numeros_escritos))
+      numero_match <- str_replace_all(numero_match, setNames(numeros, numeros_escritos))
       numero <- as.integer(numero_match)
       if (!is.na(numero)) {
         test$n_cuartos[i] <- numero
@@ -174,14 +174,14 @@ test <- test %>%
   mutate(surface_total = case_when(surface_total > 1000 ~ surface_total/1000 , TRUE ~ surface_total))
 
 
-p1  = quantile(test$surface_total, 0.01, na.rm = TRUE)
-p99 = quantile(test$surface_total, 0.99, na.rm = TRUE)
-p10 = quantile(test$surface_total, 0.10, na.rm = TRUE)
-p90 = quantile(test$surface_total, 0.90, na.rm = TRUE)
+p1  <- quantile(test$surface_total, 0.01, na.rm = TRUE)
+p99 <- quantile(test$surface_total, 0.99, na.rm = TRUE)
+p10 <- quantile(test$surface_total, 0.10, na.rm = TRUE)
+p90 <- quantile(test$surface_total, 0.90, na.rm = TRUE)
 
 # Calcular las medias
-mean_low = mean(test$surface_total[test$surface_total <= p10], na.rm = TRUE)
-mean_high = mean(test$surface_total[test$surface_total >= p90], na.rm = TRUE)
+mean_low <- mean(test$surface_total[test$surface_total <= p10], na.rm = TRUE)
+mean_high <- mean(test$surface_total[test$surface_total >= p90], na.rm = TRUE)
 
 # Reemplazar los valores en el 1% más bajo y más alto
 test$surface_total[test$surface_total < p1] <- mean_low
@@ -209,22 +209,67 @@ test <- test %>%
   mutate(parqueadero = as.numeric(grepl("parqueadero", test$description)))
 
 test <- test %>%
+  mutate(conjunto = as.numeric(grepl("conjunto", test$description)))
+
+test <- test %>%
+  mutate(piscina = as.numeric(grepl("piscina", test$description)))
+
+test <- test %>%
+  mutate(nuevo = as.numeric(grepl("estrenar", test$description)))
+summary(test$nuevo)
+
+# Creamos variable pisos
+
+sinonimos <- c("piso", "pisos")
+
+numeros_escritos <- c("uno|primero1primer", "dos|segundo","tres|tercero1tercer", "cuatro|cuarto", "cinco|quinto", 
+                      "seis|sexto", "siete|septimo", "ocho|octavo", "nueve|noveno", "diez|decimo")
+
+numeros <- as.character(1:10)
+
+for (i in 1:nrow(test)) {
+  
+  for (sinonimo in sinonimos) {
+    patron_busqueda <- paste0("(\\d+)\\s?", sinonimo)
+    match <- str_match(test$description[i], patron_busqueda)
+    if (!is.na(match[1])) {
+      numero_match <- tolower(match[2])
+      numero_match <- str_replace_all(numero_match, setNames(numeros, numeros_escritos))
+      numero <- as.integer(numero_match)
+      if (!is.na(numero)) {
+        test$n_pisos[i] <- numero
+      }
+    }
+  }
+}
+
+summary(test$n_pisos)
+
+p95 <- quantile(test$n_pisos, 0.95, na.rm = TRUE)
+
+mean_high <- mean(test$n_pisos[test$n_pisos >= p95], na.rm = TRUE)
+
+test$n_pisos[test$n_pisos > p95] <- mean_high
+
+
+moda_n_pisos <- test %>%
+  group_by(property_type) %>%
+  summarise(moda_n_pisos = as.numeric(names(which.max(table(n_pisos)))))
+
+test <- test %>%
+  left_join(moda_n_pisos, by = "property_type")
+
+test$n_pisos[is.na(test$n_pisos)] <- test$moda_n_pisos[is.na(test$n_pisos)]
+
+test <- test %>%
+  mutate(n_pisos = round(n_pisos))
+
+summary(test$n_pisos)
+
+
+test <- test %>%
   mutate(color = case_when(property_type == "Apartamento" ~ "#2A9D8F",
                            property_type == "Casa" ~ "#F4A261"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #Indicador de base
 test <- test %>%
@@ -304,7 +349,7 @@ sinonimos <- c("habitacion", "habitaciones", "alcoba", "alcobas", "cuarto", "cua
 numeros_escritos <- c("uno|primero", "dos|segundo","tres|tercero", "cuatro|cuarto", "cinco|quinto", 
                       "seis|sexto", "siete|septimo", "ocho|octavo", "nueve|noveno", "diez|decimo")
 
-numeros_numericos <- as.character(1:10)
+numeros <- as.character(1:10)
 
 # Recorremos las filas del dataset
 # Inicializa un vector n_cuartos con NA
@@ -317,7 +362,7 @@ for (i in 1:nrow(train)) {
     match <- str_match(train$description[i], patron_busqueda)
     if (!is.na(match[1])) {
       numero_match <- tolower(match[2])
-      numero_match <- str_replace_all(numero_match, setNames(numeros_numericos, numeros_escritos))
+      numero_match <- str_replace_all(numero_match, setNames(numeros, numeros_escritos))
       numero <- as.integer(numero_match)
       if (!is.na(numero)) {
         train$n_cuartos[i] <- numero
@@ -379,14 +424,14 @@ train <- train %>%
   mutate(surface_total = case_when(surface_total > 1000 ~ surface_total/1000 , TRUE ~ surface_total))
 
 
-p1  = quantile(train$surface_total, 0.01, na.rm = TRUE)
-p99 = quantile(train$surface_total, 0.99, na.rm = TRUE)
-p10 = quantile(train$surface_total, 0.10, na.rm = TRUE)
-p90 = quantile(train$surface_total, 0.90, na.rm = TRUE)
+p1  <- quantile(train$surface_total, 0.01, na.rm = TRUE)
+p99 <- quantile(train$surface_total, 0.99, na.rm = TRUE)
+p10 <- quantile(train$surface_total, 0.10, na.rm = TRUE)
+p90 <- quantile(train$surface_total, 0.90, na.rm = TRUE)
 
 # Calcular las medias
-mean_low = mean(train$surface_total[train$surface_total <= p10], na.rm = TRUE)
-mean_high = mean(train$surface_total[train$surface_total >= p90], na.rm = TRUE)
+mean_low <- mean(train$surface_total[train$surface_total <= p10], na.rm = TRUE)
+mean_high <- mean(train$surface_total[train$surface_total >= p90], na.rm = TRUE)
 
 # Reemplazar los valores en el 1% más bajo y más alto
 train$surface_total[train$surface_total < p1] <- mean_low
@@ -452,18 +497,78 @@ leaflet() %>%
              opacity = 1)
 
 
-
-
 #Creamos variables a partir de la descripcion
 train <- train %>%
   mutate(parqueadero = as.numeric(grepl("parqueadero", train$description)))
 
 train <- train %>%
+  mutate(conjunto = as.numeric(grepl("conjunto", train$description)))
+
+train <- train %>%
+  mutate(piscina = as.numeric(grepl("piscina", train$description)))
+
+train <- train %>%
+  mutate(nuevo = as.numeric(grepl("estrenar", train$description)))
+summary(train$nuevo)
+
+# Creamos variable pisos
+
+sinonimos <- c("piso", "pisos")
+
+numeros_escritos <- c("uno|primero1primer", "dos|segundo","tres|tercero1tercer", "cuatro|cuarto", "cinco|quinto", 
+                      "seis|sexto", "siete|septimo", "ocho|octavo", "nueve|noveno", "diez|decimo")
+
+numeros <- as.character(1:10)
+
+for (i in 1:nrow(train)) {
+  
+  for (sinonimo in sinonimos) {
+    patron_busqueda <- paste0("(\\d+)\\s?", sinonimo)
+    match <- str_match(train$description[i], patron_busqueda)
+    if (!is.na(match[1])) {
+      numero_match <- tolower(match[2])
+      numero_match <- str_replace_all(numero_match, setNames(numeros, numeros_escritos))
+      numero <- as.integer(numero_match)
+      if (!is.na(numero)) {
+        train$n_pisos[i] <- numero
+      }
+    }
+  }
+}
+
+summary(train$n_pisos)
+
+p95 <- quantile(train$n_pisos, 0.95, na.rm = TRUE)
+
+mean_high <- mean(train$n_pisos[train$n_pisos >= p95], na.rm = TRUE)
+
+train$n_pisos[train$n_pisos > p95] <- mean_high
+
+
+moda_n_pisos <- train %>%
+  group_by(property_type) %>%
+  summarise(moda_n_pisos = as.numeric(names(which.max(table(n_pisos)))))
+
+train <- train %>%
+  left_join(moda_n_pisos, by = "property_type")
+
+train$n_pisos[is.na(train$n_pisos)] <- train$moda_n_pisos[is.na(train$n_pisos)]
+
+train <- train %>%
+  mutate(n_pisos = round(n_pisos))
+
+summary(train$n_pisos)
+
+train <- train %>%
   mutate(base = c(1))
 
+
 #___________________________________________________________
+#
 # VARIABLES ESPACIALES
+#
 #___________________________________________________________
+
 
 #   Variables espaciales
 db <- rbind(test, train)
