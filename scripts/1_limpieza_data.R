@@ -905,6 +905,61 @@ areas_parques <- st_area(parques_geometria)
 db <- db %>%
   mutate(area_parques = as.numeric(areas_parques[posicion]))
 
+
+#.................................
+##Estratos
+Data_censo <- read_rds("mgn_censo_2018.rds") 
+Data_censo$MANZ_CCNCT <- NULL
+Data_censo$med_H_NRO_CUARTOS <- NULL
+Data_censo$sum_HA_TOT_PER <- NULL
+Data_censo$med_V_TOT_HOG <- NULL
+
+Data_censo_sf <-st_transform(Data_censo,4686)
+
+db_sf_4686 <-st_transform(db_sf,4686)
+
+
+cestratos <- gCentroid(as(Data_censo_sf$geometry, "Spatial"), byid = T)
+
+cest_sf <- st_as_sf(cestratos, coords = c("x", "y"))
+
+cest_sf <-st_transform(cest_sf,4686)
+
+estratos_nearest_train<-st_nearest_feature(db_sf_4686,cest_sf)
+
+db<-db %>% 
+  mutate(estrato = Data_censo_sf$med_VA1_ESTRATO[estratos_nearest_train])
+
+
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = longitud_central, lat = latitud_central, zoom = 12) %>%
+  addPolygons( data= Data_censo,weight = 10,
+               opacity = 0.8, popup = Data_censo$geometry) %>%
+  addCircles(lng = train$lon, 
+             lat = train$lat, 
+             col = train$color,
+             fillOpacity = 1,
+             opacity = 1)
+
+
+for (i in 1:nrow(test)) {
+  match <- str_match(db$description[i], "(\\d+)(\\s?estrato|estrat)")
+  if (!is.na(match[1])) {
+    db$estrato_text[i] <- as.integer(match[2])
+  } else {
+    db$estrato_text[i] <- NA
+  }
+}
+
+db$estrato_text[db$estrato_text > 6] <- NA
+
+summary(db$estrato_text)
+
+db$estrato <- ifelse(is.na(db$estrato), db$estrato_text, db$estrato)
+summary(db$estrato)
+
+
 #___________________________________________________________
 #Dividir otra vez las bases con los datos espaciales
 test_2 <- db[db$base == 0, ]
