@@ -959,7 +959,16 @@ summary(db$estrato_text)
 db$estrato <- ifelse(is.na(db$estrato), db$estrato_text, db$estrato)
 summary(db$estrato)
 
+#___________________________________________________________
+db <- subset(db, select = -n_banos)
+db <- subset(db, select = -n_cuartos)
+db <- subset(db, select = -n_surface_total)
+db <- subset(db, select = -estrato_text)
+db <- subset(db, select = -color)
+db <- subset(db, select = -moda_n_pisos)
+db <- subset(db, select = -n_pisos)
 
+                            
 #___________________________________________________________
 #Dividir otra vez las bases con los datos espaciales
 test_2 <- db[db$base == 0, ]
