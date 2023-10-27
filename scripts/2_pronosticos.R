@@ -32,10 +32,73 @@ submission_template <- read.csv("submission_template.csv")
 
 db <- read.xlsx("db.xlsx") 
 
+sapply(db,function(x) sum(is.na(x)))
+
+
+
+
+## Modelo Líneal
+
+#Modelo 1
+
+rec_1 <- recipe(price ~ surface_total + bathrooms + bedrooms + property_type + distancia_universidades +
+                        distancia_bus  + distancia_policia + distancia_concesionarios + distancia_parque + estrato, data = db)%>% 
+  step_dummy(all_nominal_predictors())
+
+reglineal<-linear_reg()
+
+
+workf_1<-workflow() %>% 
+  add_recipe(rec_1) %>% 
+  add_model(reglineal)
+
+
+df_RMSE <- data.frame(Modelo = character(),RMSE = numeric())
+
+
+fit_1 <- workf_1 %>% 
+  fit(data=train) 
+
+
+y1 <- predict(fit_1, new_data = train) %>% 
+  bind_cols(train) 
+
+y1<- y1 %>%
+  select(property_id, .pred)
+
+colnames(y1)[".pred"] <- "price"
+
+y1$price <- y1$.pred
+
+y1 <- y1[, -which(names(y1) == ".pred")]
+
+write.table(y1, file = "ML_1.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #   prediccion
-nrow(test_2)/nrow(train_2)
+nrow(test)/nrow(train)
 
 #Toca validar
 
@@ -57,27 +120,27 @@ elastic_net_spec <- linear_reg(penalty = lambda, mixture = .5) %>%
 
 
 # Primera receta
-rec_1 <- recipe(price ~ total_rooms +surface_total + bathrooms + bedrooms + property_type + distancia_universidades +
-                  distancia_bus  + distancia_policia + distancia_concesionarios + distancia_parque , data = db) %>%
-  step_interact(terms = ~ total_rooms:bedrooms+bathrooms:property_type) %>% 
+rec_1 <- recipe(price ~ surface_total + bathrooms + bedrooms + property_type + distancia_universidades +
+                  distancia_bus  + distancia_policia + distancia_concesionarios + distancia_parque + estrato , data = db) %>%
+  step_interact(terms = ~ estrato:bedrooms+bathrooms:property_type) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) %>% 
   step_normalize(all_predictors())
 
 # Segunda receta 
-rec_2 <- recipe(price ~ total_rooms + surface_total + bathrooms + bedrooms + property_type + area_universidades + 
+rec_2 <- recipe(price ~ surface_total + bathrooms + bedrooms + property_type + area_universidades + 
                   area_comercial + area_parques + distancia_bus  +
-                  distancia_bus + distancia_policia , data = db) %>%
-  step_interact(terms = ~ total_rooms:bedrooms+bathrooms:property_type) %>% 
+                  distancia_bus + distancia_policia + estrato , data = db) %>%
+  step_interact(terms = ~ estrato:bedrooms+bathrooms:property_type) %>% 
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) %>% 
   step_normalize(all_predictors())
 
 ##Preguntas_______
-train_2 <- as.data.frame(lapply(train_2, as.double))
-test_2 <- as.data.frame(lapply(test_2, as.double))
+train <- as.data.frame(lapply(train, as.double))
+test <- as.data.frame(lapply(test, as.double))
 
 
 # Crear un flujo de trabajo que incluye la receta de preprocesamiento y el modelo
@@ -108,23 +171,23 @@ workflow_2.3 <- workflow() %>%
 
 # Entrenamos el primer modelo con los datos de train 
 fit_1.1 <- workflow_1.1 %>%
-  fit(data = train_2)
+  fit(data = train)
 
 fit_1.2 <- workflow_1.2 %>%
-  fit(data = train_2)
+  fit(data = train)
 
 fit_1.3 <- workflow_1.3 %>%
-  fit(data = train_2)
+  fit(data = train)
 
 
 fit_2.1 <- workflow_1.1 %>%
-  fit(data = train_2)
+  fit(data = train)
 
 fit_2.2 <- workflow_2.2 %>%
-  fit(data = train_2)
+  fit(data = train)
 
 fit_2.3 <- workflow_1.1 %>%
-  fit(data = train_2)
+  fit(data = train)
 
 
 # Sacamos las predicciones sobre los datos de test 
