@@ -17,8 +17,8 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
 
 # - Revisar el espacio de trabajo
 
-#setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
+#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -34,6 +34,25 @@ db <- read.xlsx("db.xlsx")
 
 sapply(db,function(x) sum(is.na(x)))
 
+db<- db %>% mutate(areaxparques=area_parques*distancia_parque)
+train<- train %>% mutate(areaxparques=area_parques*distancia_parque)
+test<- test %>% mutate(areaxparques=area_parques*distancia_parque)
+
+db<- db %>% mutate(areaxuniversidades=area_universidades*distancia_universidades)
+train<- train %>% mutate(areaxuniversidades=area_universidades*distancia_universidades)
+test<- test %>% mutate(areaxuniversidades=area_universidades*distancia_universidades)
+
+db<- db %>% mutate(areaxcomerciales=area_comercial*distancia_comercial)
+train<- train %>% mutate(areaxcomerciales=area_comercial*distancia_comercial)
+test<- test %>% mutate(areaxcomerciales=area_comercial*distancia_comercial)
+
+db<- db %>% mutate(bedroomxbathroom =bathrooms*bedrooms)
+train<- train %>% mutate(bedroomxbathroom =bathrooms*bedrooms)
+test<- test %>% mutate(bedroomxbathroom =bathrooms*bedrooms)
+
+db<- db %>% mutate(distancia_bus_2 =distancia_bus*distancia_bus)
+train<- train %>% mutate(distancia_bus_2 =distancia_bus*distancia_bus)
+test<- test %>% mutate(distancia_bus_2 =distancia_bus*distancia_bus)
 
 
 
@@ -251,9 +270,17 @@ boost_spec <- boost_tree(
   set_mode("regression")  #
 
 # Primera receta
-rec_1 <- recipe(price ~ total_rooms + surface_total + bathrooms + bedrooms + property_type + area_universidades + 
-                  area_comercial + area_parques + distancia_bus  +
-                  distancia_bus + distancia_policia , data = db) %>%
+#rec_1 <- recipe(price ~ total_rooms + surface_total + bathrooms + bedrooms + property_type + area_universidades + 
+#                  area_comercial + area_parques + distancia_bus  +
+#                  distancia_bus + distancia_policia , data = db) %>%
+#  step_novel(all_nominal_predictors()) %>% 
+#  step_dummy(all_nominal_predictors()) %>% 
+#  step_zv(all_predictors()) 
+
+rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + parqueadero + property_type + 
+                  area_comercial + distancia_bus + areaxparques + distancia_bus_2 + surface_total 
+                + parqueadero + nuevo + distancia_parque + distancia_universidades + estrato, data = db) %>%
+  step_interact(terms = ~ bathrooms:rooms+bedrooms:rooms) %>%
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
   step_zv(all_predictors()) 
@@ -263,7 +290,7 @@ workflow_1.3 <- workflow() %>%
   add_model(boost_spec)
 
 train_sff <- st_as_sf(
-  train_2,
+  train,
   # "coords" is in x/y order -- so longitude goes first!
   coords = c("lon", "lat"),
   # Set our coordinate reference system to EPSG:4326,
@@ -293,17 +320,13 @@ best_parms_boost
 
 boost_final <- finalize_workflow(workflow_1.3, best_parms_boost)
 
-##Preguntas_______
-##train_2 <- as.data.frame(lapply(train_2, as.double))
-##test_2 <- as.data.frame(lapply(test_2, as.double))
-
 boost_final_fit <- boost_final %>%
-  fit(data = train_2)
+  fit(data = train)
 
 # Ajustar el modelo  utilizando los datos de entrenamiento
-#boost_final_fit <- fit(boost_final, data = test_2)
+#boost_final_fit <- fit(boost_final, data = test)
 
-predictiones_1.3 <- predict(boost_final_fit, new_data = test_2)
+predictiones_1.3 <- predict(boost_final_fit, new_data = test)
 
 submission_template$ID <- 1:nrow(submission_template)
 
@@ -315,5 +338,13 @@ subidafinal = subset(subida, select = -c(ID,price) )
 
 colnames(subidafinal)[2]="price"
 
-write.csv(subidafinal,file='subida32.csv', row.names=FALSE)
+write.csv(subidafinal,file='subida40.csv', row.names=FALSE)
+
+
+
+
+
+
+
+
 
