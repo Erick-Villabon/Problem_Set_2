@@ -28,8 +28,8 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
        units, randomForest, rattle, spatialsample)
 
 # - Actualizar espacio de trabajo 
-setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+#setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
+setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -908,7 +908,7 @@ db <- db %>%
 
 #.................................
 ##Estratos
-Data_censo <- read_rds("mgn_censo_2018.rds") 
+Data_censo <- read_rds("output/mgn_censo_2018.rds") 
 Data_censo$MANZ_CCNCT <- NULL
 Data_censo$med_H_NRO_CUARTOS <- NULL
 Data_censo$sum_HA_TOT_PER <- NULL
