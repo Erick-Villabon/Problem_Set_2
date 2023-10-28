@@ -1,7 +1,7 @@
 require(pacman) 
 
-setwd("/Users/juandiego/Documents/U/8Semestre/BigData")
-
+#setwd("/Users/juandiego/Documents/U/8Semestre/BigData")
+setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 p_load(tidyverse,rio,skimr,
        viridis, # paletas de colores
        sf, # Leer/escribir/manipular datos espaciales
