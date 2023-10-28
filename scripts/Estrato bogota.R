@@ -1,14 +1,13 @@
 require(pacman) 
 
+setwd("/Users/juandiego/Documents/U/8Semestre/BigData")
+
 p_load(tidyverse,rio,skimr,
        viridis, # paletas de colores
        sf, # Leer/escribir/manipular datos espaciales
        leaflet, # Visualizaciones dinámicas
        tmaptools, # geocode_OSM()
        osmdata) # Get OSM's data
-
-## censo data
-browseURL("https://microdatos.dane.gov.co//catalog/643/get_microdata")
 
 ##=== variables ===##
 
@@ -22,9 +21,6 @@ browseURL("https://microdatos.dane.gov.co//catalog/643/get_microdata")
 ## VA1_ESTRATO: Estrato de la vivienda (según servicio de energía)
 
 ##=== load data ===##
-
-## unzip file
-unzip(zipfile="input/11_BOGOTA_CSV.zip" , exdir="input/." , overwrite=T) 
 
 ## data manzanas
 mgn <- import("input/censo_2018/CNPV2018_MGN_A2_11.CSV")
@@ -58,15 +54,7 @@ db <- viv_hog_mgn %>%
 ## export data
 export(db,"output/mnz_censo_2018.rds")
 
-## delete files
-unlink("input/censo_2018/",recursive = T)
-unlink("input/__MACOSX/",recursive = T)
-
-
 ####
-## MGN data
-browseURL("https://geoportal.dane.gov.co/servicios/descarga-y-metadatos/descarga-mgn-marco-geoestadistico-nacional/")
-
 ## load data
 mgn <- st_read("input/mgn/MGN_URB_MANZANA.shp")
 
@@ -75,6 +63,7 @@ mgn %>% head()
 table(mgn$CLAS_CCDGO)
 
 mgn <- mgn %>% subset(CLAS_CCDGO==1)
+mgn <- mgn %>% subset(DPTO_CCDGO==11)
 mgn <- mgn %>% select(MANZ_CCNCT)
 
 
