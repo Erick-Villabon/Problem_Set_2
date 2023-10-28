@@ -28,8 +28,8 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
        units, randomForest, rattle, spatialsample)
 
 # - Actualizar espacio de trabajo 
-#setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
+#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -914,6 +914,9 @@ Data_censo$med_H_NRO_CUARTOS <- NULL
 Data_censo$sum_HA_TOT_PER <- NULL
 Data_censo$med_V_TOT_HOG <- NULL
 
+Data_censo <- subset(Data_censo, subset= !is.na(Data_censo$med_VA1_ESTRATO))
+summary(Data_censo)
+
 Data_censo_sf <-st_transform(Data_censo,4686)
 
 db_sf_4686 <-st_transform(db_sf,4686)
@@ -943,27 +946,27 @@ leaflet() %>%
              opacity = 1)
 
 
-for (i in 1:nrow(test)) {
-  match <- str_match(db$description[i], "(\\d+)(\\s?estrato|estrat)")
-  if (!is.na(match[1])) {
-    db$estrato_text[i] <- as.integer(match[2])
-  } else {
-    db$estrato_text[i] <- NA
-  }
-}
+#for (i in 1:nrow(test)) {
+#  match <- str_match(db$description[i], "(\\d+)(\\s?estrato|estrat)")
+#  if (!is.na(match[1])) {
+#    db$estrato_text[i] <- as.integer(match[2])
+#  } else {
+#    db$estrato_text[i] <- NA
+#  }
+#}
 
-db$estrato_text[db$estrato_text > 6] <- NA
+#db$estrato_text[db$estrato_text > 6] <- NA
 
-summary(db$estrato_text)
+#summary(db$estrato_text)
 
-db$estrato <- ifelse(is.na(db$estrato), db$estrato_text, db$estrato)
-summary(db$estrato)
+#db$estrato <- ifelse(is.na(db$estrato), db$estrato_text, db$estrato)
+#summary(db$estrato)
 
 #___________________________________________________________
 db <- subset(db, select = -n_banos)
 db <- subset(db, select = -n_cuartos)
 db <- subset(db, select = -n_surface_total)
-db <- subset(db, select = -estrato_text)
+#db <- subset(db, select = -estrato_text)
 db <- subset(db, select = -color)
 db <- subset(db, select = -moda_n_pisos)
 db <- subset(db, select = -n_pisos)
@@ -973,6 +976,8 @@ db <- subset(db, select = -n_pisos)
 #Dividir otra vez las bases con los datos espaciales
 test_2 <- db[db$base == 0, ]
 train_2 <- db[db$base == 1, ]
+
+table(db$estrato)
 
 write_xlsx(test_2, "test_2.xlsx")
 write_xlsx(db, "db.xlsx")
