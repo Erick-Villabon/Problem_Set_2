@@ -224,7 +224,7 @@ test <- test %>%
   mutate(piscina = as.numeric(grepl("piscina", test$description)))
 
 test <- test %>%
-  mutate(nuevo = as.numeric(grepl("estrenar", test$description)))
+  mutate(nuevo = as.numeric(grepl("estrenar|nuevo|nueva", test$description)))
 summary(test$nuevo)
 
 test <- test %>%
@@ -517,7 +517,7 @@ train <- train %>%
   mutate(piscina = as.numeric(grepl("piscina", train$description)))
 
 train <- train %>%
-  mutate(nuevo = as.numeric(grepl("estrenar", train$description)))
+  mutate(nuevo = as.numeric(grepl("estrenar|nuevo|nueva", train$description)))
 summary(train$nuevo)
 
 train <- train %>%
