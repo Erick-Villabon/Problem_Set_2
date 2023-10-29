@@ -13,12 +13,13 @@ rm(list = ls())
 library(pacman)
 p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, openxlsx, glmnet,
        rio, leaflet, rgeos, modeldata, vtable, tmaptools, sf, osmdata, tidymodels, writexl, 
-       units, randomForest, rattle, spatialsample)
+       units, randomForest, rattle, spatialsample, xgboost)
 
 # - Revisar el espacio de trabajo
 
 #setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+setwd("E:/Problem_Set_2/stores")
+#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
@@ -53,6 +54,10 @@ test<- test %>% mutate(bedroomxbathroom =bathrooms*bedrooms)
 db<- db %>% mutate(distancia_bus_2 =distancia_bus*distancia_bus)
 train<- train %>% mutate(distancia_bus_2 =distancia_bus*distancia_bus)
 test<- test %>% mutate(distancia_bus_2 =distancia_bus*distancia_bus)
+
+db<- db %>% mutate(estratoxrooms =estrato*bedrooms)
+train<- train %>% mutate(estratoxrooms =estrato*bedrooms)
+test<- test %>% mutate(estratoxrooms =estrato*bedrooms)
 
 ##________________________________________________________________________
 #
@@ -103,26 +108,34 @@ write.table(y1, file = "ML_1.csv", sep = ",", row.names = FALSE, col.names = TRU
 ##________________________________________________________________________
 
 
-reg1 <- lm(price ~ surface_total + bathrooms + bedrooms + property_type + 
-                 distancia_universidades + distancia_bus  + distancia_policia + 
-                 distancia_concesionarios + distancia_parque + estrato, data = db)
-stargazer(reg1,type="text")
+#reg1 <- lm(price ~ surface_total + bathrooms + bedrooms + property_type + 
+#                 distancia_universidades + distancia_bus  + distancia_policia + 
+#                 distancia_concesionarios + distancia_parque + estrato, data = db)
+#stargazer(reg1,type="text")
 
 
 # encontrar el lambda optimo
   
-train_fold <- vfold_cv(train, v = 5)
+train_fold <- vfold_cv(train, v = 30)
 
 # Primera receta
 
-rec_1 <- recipe(price ~ surface_total + bathrooms + bedrooms + property_type + area_universidades + 
-                  area_comercial + area_parques + distancia_bus  +
-                  distancia_bus + distancia_policia + estrato , data = db) %>%
-  step_interact(terms = ~ estrato:bedrooms+bathrooms:property_type) %>% 
+#rec_1 <- recipe(price ~ surface_total + bathrooms + bedrooms + property_type + area_universidades + 
+#                  area_comercial + area_parques + distancia_bus  +
+#                  distancia_bus + distancia_policia + estrato , data = db) %>%
+#  step_interact(terms = ~ estrato:bedrooms+bathrooms:property_type) %>% 
+#  step_novel(all_nominal_predictors()) %>% 
+#  step_dummy(all_nominal_predictors()) %>% 
+#  step_zv(all_predictors()) %>% 
+#  step_normalize(all_predictors())
+
+rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + parqueadero + property_type + 
+                  area_comercial + distancia_bus + areaxparques + distancia_bus_2 + surface_total 
+                + parqueadero + nuevo + distancia_parque + distancia_universidades + estrato + estratoxrooms, data = db) %>%
+  step_interact(terms = ~ bathrooms:rooms+bedrooms:rooms) %>%
   step_novel(all_nominal_predictors()) %>% 
   step_dummy(all_nominal_predictors()) %>% 
-  step_zv(all_predictors()) %>% 
-  step_normalize(all_predictors())
+  step_zv(all_predictors()) 
 
 
 # Ridge
@@ -215,7 +228,7 @@ workflow_1.3 <- workflow() %>%
   )
   colnames(subida)[2]<-"price"
   
-  write.csv(subida,file='Ridge.csv', row.names=FALSE)
+  write.csv(subida,file='Ridge_2.csv', row.names=FALSE)
   
   
   predictiones_1.2 <- predict(fit_1.2 , new_data = test)
@@ -226,7 +239,7 @@ workflow_1.3 <- workflow() %>%
   )
   colnames(subida)[2]<-"price"
   
-  write.csv(subida,file='Lasso.csv', row.names=FALSE)
+  write.csv(subida,file='Lasso_2.csv', row.names=FALSE)
   
   
     
@@ -238,7 +251,7 @@ workflow_1.3 <- workflow() %>%
   )
   colnames(subida)[2]<-"price"
 
-  write.csv(subida,file='Elastic_Net.csv', row.names=FALSE)
+  write.csv(subida,file='Elastic_Net_2.csv', row.names=FALSE)
   
 
 
@@ -452,13 +465,13 @@ workflow_1.3 <- workflow() %>%
   
   
   
-  
+################################################################
   
 # Tune grid aleatorio para el modelo de boost
 tune_grid_boost <- grid_random(
   trees(range = c(400, 700)),
   min_n(range = c(1, 4)),
-  learn_rate(range = c(0.001, 0.01)), size = 20
+  learn_rate(range = c(0.001, 0.01)), size = 50
 )
 
 # Especificación del modelo boost_tree en tidymodels
@@ -478,7 +491,7 @@ boost_spec <- boost_tree(
 #  step_zv(all_predictors()) 
 
 rec_1 <- recipe(price ~ rooms + bathrooms + bedrooms + parqueadero + property_type + 
-                  area_comercial + distancia_bus + areaxparques + distancia_bus_2 + surface_total 
+                  area_comercial + distancia_bus + areaxparques + distancia_bus_2 #+ surface_total 
                 + parqueadero + nuevo + distancia_parque + distancia_universidades + estrato, data = db) %>%
   step_interact(terms = ~ bathrooms:rooms+bedrooms:rooms) %>%
   step_novel(all_nominal_predictors()) %>% 
@@ -499,7 +512,7 @@ train_sff <- st_as_sf(
 )
 # aplicamos la funcion spatial_block_cv
 set.seed(123)
-block_folds <- spatial_block_cv(train_sff, v = 5)
+block_folds <- spatial_block_cv(train_sff, v = 7)
 
 autoplot(block_folds)
 
@@ -538,7 +551,7 @@ subidafinal = subset(subida, select = -c(ID,price) )
 
 colnames(subidafinal)[2]="price"
 
-write.csv(subidafinal,file='subida40.csv', row.names=FALSE)
+write.csv(subidafinal,file='subida41.csv', row.names=FALSE)
 
 
 
