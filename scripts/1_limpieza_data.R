@@ -29,7 +29,9 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
 
 # - Actualizar espacio de trabajo 
 #setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+setwd("E:/Problem_Set_2/stores")
+
 getwd()
 list.files()
 
@@ -224,6 +226,11 @@ test <- test %>%
 test <- test %>%
   mutate(nuevo = as.numeric(grepl("estrenar", test$description)))
 summary(test$nuevo)
+
+test <- test %>%
+  mutate(duplex = as.numeric(grepl("duplex", test$description)))
+summary(test$duplex)
+
 
 # Creamos variable pisos
 
@@ -513,6 +520,10 @@ train <- train %>%
   mutate(nuevo = as.numeric(grepl("estrenar", train$description)))
 summary(train$nuevo)
 
+train <- train %>%
+  mutate(duplex = as.numeric(grepl("duplex", train$description)))
+summary(train$duplex)
+
 # Creamos variable pisos
 
 sinonimos <- c("piso", "pisos")
@@ -564,6 +575,26 @@ summary(train$n_pisos)
 train <- train %>%
   mutate(base = c(1))
 
+#Union ambas bases
+db <- rbind(test, train)
+
+
+#Revision variables property type
+db <- db %>%
+  mutate(property_type_2 = ifelse(grepl("casa", description), "casa", property_type))
+
+db <- db %>%
+  mutate(property_type_2 = ifelse(grepl("apto|apartamento", description), "apartamento", property_type_2)) %>%
+  select(-property_type)
+
+db <- db %>%
+  mutate(property_type_2 = ifelse(grepl("casa", title), "casa", property_type_2))
+
+db <- db %>%
+  mutate(property_type_2 = ifelse(grepl("apto|apartamento", title), "apartamento", property_type_2)) %>%
+  select(-property_type)
+
+
 #___________________________________________________________
 #
 #                VARIABLES ESPACIALES
@@ -572,7 +603,6 @@ train <- train %>%
 
 
 #   Variables espaciales
-db <- rbind(test, train)
 
 train_sf <- st_as_sf(train, coords = c("lon", "lat"), crs=4326)
 test_sf <- st_as_sf(test, coords = c("lon", "lat"), crs=4326)
