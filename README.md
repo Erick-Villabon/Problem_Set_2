@@ -10,3 +10,6 @@ Boosting.
 Store: se encuentran las bases de datos iniciales, las bases de datos después de limpieza de datos y los resultados de los pronósticos.
 
 Views: en esta carpeta se guardan todas las tablas y gráficas que se presentan en el pdf.
+
+
+Nota: debido a que algunas bases son pesadas y no se pudieron subir en github se encuentra el link de acceso a estas báses https://we.tl/t-YmuDZgvBXm
