@@ -18,8 +18,8 @@ p_load(rvest, tidyverse, ggplot2, robotstxt, psych, stargazer, boot, plotly, ope
 # - Revisar el espacio de trabajo
 
 #setwd("/Users/juandiego/Desktop/GitHub/Problem_Set_2/stores")
-setwd("E:/Problem_Set_2/stores")
-#setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
+#setwd("E:/Problem_Set_2/stores")
+setwd("C:/Users/Erick/Desktop/Problem_Set_2/stores")
 getwd()
 list.files()
 
